@@ -59,11 +59,6 @@ func (g *GroupRepository) GetOne(groupId string, dynamoDBSvc *dynamodb.DynamoDB)
 
 func (g *GroupRepository) Create(group groupModels.Group, dynamoDBSvc *dynamodb.DynamoDB) (bool, error) {
 
-	if len(group.LeaderBoard) == 0 {
-		newLeaderBoardItem := groupModels.LeaderBoardItem{group.CreatedBy, 0.0}
-		group.LeaderBoard = append(group.LeaderBoard, newLeaderBoardItem)
-	}
-
 	av, err := dynamodbattribute.MarshalMap(group)
 	if err != nil {
 		log.Fatalf("Got error marshalling new group item: %s", err)

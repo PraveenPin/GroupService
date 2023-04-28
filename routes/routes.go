@@ -24,19 +24,16 @@ func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.
 	log.Println("Initialize the router")
 	router := mux.NewRouter()
 
-	groupController := &controllers.GroupController{}
-	groupController.SetDynamodbSVC(db)
-	groupController.SetCtx(ctx)
-	groupController.SetRedisClient(rdc)
+	groupController := controllers.NewGroupController(db, ctx, rdc)
 
 	router.StrictSlash(true)
 	router.HandleFunc("/", HomeEndpoint).Methods("GET")
 
 	// Group Resource
 	groupRoutes := router.PathPrefix("/group").Subrouter()
-	groupRoutes.HandleFunc("/createGroup", groupController.CreateGroup).Methods("POST")
-	groupRoutes.HandleFunc("/joinGroup", groupController.JoinGroup).Methods("POST")
-	groupRoutes.HandleFunc("/leaveGroup", groupController.LeaveGroup).Methods("POST")
+	groupRoutes.HandleFunc("/createGroup", groupController.CreateGroupController).Methods("POST")
+	groupRoutes.HandleFunc("/joinGroup", groupController.JoinGroupController).Methods("POST")
+	groupRoutes.HandleFunc("/leaveGroup", groupController.LeaveGroupController).Methods("POST")
 	//groupRoutes.HandleFunc("/openGroup", groupController.getGroup).Methods("POST")
 
 	//Testing purposes

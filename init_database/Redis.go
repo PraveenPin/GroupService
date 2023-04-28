@@ -15,9 +15,9 @@ func (rd *RedisDatabase) GetScoreByAUserInAGroup(ctx context.Context, client *re
 	fmt.Println("User, group, score :", userName, groupName, score.Val())
 	return
 }
-func (rd *RedisDatabase) AddScoreToAUserInAGroup(ctx context.Context, client *redis.Client, groupName string, userName string, scoreToAdd int) {
+func (rd *RedisDatabase) AddScoreToAUserInAGroup(ctx context.Context, client *redis.Client, groupName string, userName string, scoreToAdd float64) {
 
-	res, err := client.ZIncrBy(ctx, groupName, float64(scoreToAdd), userName).Result()
+	res, err := client.ZIncrBy(ctx, groupName, scoreToAdd, userName).Result()
 
 	if err != nil {
 		log.Fatalf("Error adding user score", err)

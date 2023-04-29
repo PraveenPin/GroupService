@@ -1,7 +1,5 @@
 package groupModels
 
-import "github.com/PraveenPin/SwipeMeter/models"
-
 type LeaderBoardItem struct {
 	Username string
 	Score    float32
@@ -23,11 +21,10 @@ type Group struct {
 	LeaderBoard []LeaderBoardItem
 	Links       []Link
 	CreatedBy   string
-	AuthToken   models.AuthToken
 }
 
 type JoinGroupModel struct {
-	GroupID   string
-	Username  string
-	AuthToken models.AuthToken
+	GroupID  string
+	Username string
+	Time     float64
 }

@@ -111,3 +111,11 @@ func (g *GroupController) GetGroup(w http.ResponseWriter, r *http.Request) {
 	response.Format(w, r, false, 200, returnVal)
 	return
 }
+
+func (g *GroupController) UpdateScoresController(username string, score float64) {
+	// find all the groups in which user exists
+	g.groupService.GetAllUserGroupsService(username)
+	// update the score in each group board
+	// add score to total time in dynamodb
+
+}

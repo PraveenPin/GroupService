@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package services;
+option go_package = "github.com/PraveenPin/SwipeMeter/services";
+
+service UserService {
+  rpc AddGroupToUser(AddGroupToUserRequest) returns (AddGroupToUserResponse) {}
+  rpc RemoveGroupFromUser(RemoveGroupFromUserRequest) returns (RemoveGroupFromUserResponse) {}
+  rpc GetAllUserGroupsAndUpdateTotalScore(UserNameRequest) returns (UserNameResponse) {}
+}
+
+message AddGroupToUserRequest {
+  string username = 1;
+  string groupId = 2;
+}
+
+message AddGroupToUserResponse {
+  bool success = 1;
+}
+
+message RemoveGroupFromUserRequest {
+  string username = 1;
+  string groupId = 2;
+}
+
+message RemoveGroupFromUserResponse {
+  bool success = 1;
+}
+
+message UserNameRequest {
+  string username = 1;
+  float score = 2;
+}
+message UserNameResponse {
+  string username = 1;
+  repeated string groups = 2;
+}

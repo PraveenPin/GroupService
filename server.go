@@ -11,6 +11,7 @@ func main() {
 	session := app.StartAWSSession()
 	dynamoDBSvc := app.GetDynamoDatabaseClient(session)
 	redisClient := app.GetRedisClient(ctx)
+	pubsubClient := app.GetPubSubClient(ctx)
 
 	//redis database utils
 	redisDB := &init_database.RedisDatabase{}
@@ -21,6 +22,7 @@ func main() {
 	//redisDB.AddScoreToAUserInAGroup(ctx, redisClient, "JTcWuWP3Wkug22d3XM5KS5", "praveenpin-1", 9)
 
 	dispatcher := routes.Dispatcher{}
-	dispatcher.Init(dynamoDBSvc, redisClient, ctx)
+
+	dispatcher.Init(dynamoDBSvc, redisClient, ctx, pubsubClient)
 
 }

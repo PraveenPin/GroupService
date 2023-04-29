@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"github.com/PraveenPin/GroupService/groupModels"
 	"github.com/PraveenPin/GroupService/repo"
-	"github.com/PraveenPin/GroupService/routes"
-	repo2 "github.com/PraveenPin/SwipeMeter/repo"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/go-redis/redis/v8"
 	"github.com/lithammer/shortuuid/v4"
-	"google.golang.org/grpc"
 	"log"
 )
 
@@ -19,11 +16,11 @@ type GroupService struct {
 	ctx         context.Context
 	redisClient *redis.Client
 	groupRepo   *repo.GroupRepository
-	swipeRepo   *repo2.UserRepository
+	grpcClient  UserServiceClient
 }
 
-func NewGroupService(dynamodbSVC *dynamodb.DynamoDB, ctx context.Context, redisClient *redis.Client, groupRepo *repo.GroupRepository) *GroupService {
-	return &GroupService{dynamodbSVC: dynamodbSVC, ctx: ctx, redisClient: redisClient, groupRepo: groupRepo}
+func NewGroupService(dynamodbSVC *dynamodb.DynamoDB, ctx context.Context, redisClient *redis.Client, groupRepo *repo.GroupRepository, grpcClient UserServiceClient) *GroupService {
+	return &GroupService{dynamodbSVC: dynamodbSVC, ctx: ctx, redisClient: redisClient, groupRepo: groupRepo, grpcClient: grpcClient}
 }
 
 func (g *GroupService) DynamodbSVC() *dynamodb.DynamoDB {
@@ -205,20 +202,10 @@ func (g *GroupService) DeleteGroup(joinGroup groupModels.JoinGroupModel) (bool, 
 }
 
 func (g *GroupService) AddGroupToUsersTable(username string, groupID string) (bool, error) {
-	// Create a gRPC client to the server
-	conn, err := grpc.Dial(routes.GRPC_TARGET, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect to gRPC server: %v", err)
-		return false, err
-	}
-	defer conn.Close()
-
-	client := NewUserServiceClient(conn)
-
 	log.Println("Calling rpc to add group to user ", username, groupID)
 
 	// Create user
-	_, err = client.AddGroupToUser(context.Background(), &AddGroupToUserRequest{
+	_, err := g.grpcClient.AddGroupToUser(context.Background(), &AddGroupToUserRequest{
 		Username: username,
 		GroupId:  groupID,
 	})
@@ -230,18 +217,9 @@ func (g *GroupService) AddGroupToUsersTable(username string, groupID string) (bo
 }
 
 func (g *GroupService) RemoveGroupFromUsersTable(username string, groupID string) (bool, error) {
-	// Create a gRPC client to the server
-	conn, err := grpc.Dial(routes.GRPC_TARGET, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect to gRPC server: %v", err)
-		return false, err
-	}
-	defer conn.Close()
+	log.Println("Calling rpc to remove group to user ", username, groupID)
 
-	client := NewUserServiceClient(conn)
-
-	// Create user
-	_, err = client.RemoveGroupFromUser(context.Background(), &RemoveGroupFromUserRequest{
+	_, err := g.grpcClient.RemoveGroupFromUser(context.Background(), &RemoveGroupFromUserRequest{
 		Username: username,
 		GroupId:  groupID,
 	})
@@ -252,26 +230,40 @@ func (g *GroupService) RemoveGroupFromUsersTable(username string, groupID string
 	return true, nil
 }
 
-func (g *GroupService) GetAllUserGroupsServiceAndUpdateTotalScore(username string, score float32) ([]string, error) {
+func (g *GroupService) GetAllUserGroupsServiceAndUpdateTotalScore(username string, score float32) []string {
 	// Create a gRPC client to the server
-	conn, err := grpc.Dial(routes.GRPC_TARGET, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect to gRPC server: %v", err)
-		return []string{}, err
-	}
-	defer conn.Close()
-
-	client := NewUserServiceClient(conn)
+	//conn, err := grpc.Dial(routes.GRPC_TARGET, grpc.WithInsecure())
+	//if err != nil {
+	//	log.Fatalf("failed to connect to gRPC server: %v", err)
+	//	return []string{}
+	//}
+	//defer conn.Close()
+	//
+	//client := NewUserServiceClient(conn)
+	log.Println("Calling rpc to update total time and get groups of user ", username)
 
 	resp := &UserNameResponse{}
 	// Create user
-	resp, err = client.GetAllUserGroupsAndUpdateTotalScore(context.Background(), &UserNameRequest{
+	resp, err := g.grpcClient.GetAllUserGroupsAndUpdateTotalScore(context.Background(), &UserNameRequest{
 		Username: username,
 		Score:    score,
 	})
 	if err != nil {
 		log.Fatalf("failed to remove user: %v", err)
-		return []string{}, err
+		return []string{}
 	}
-	return resp.GetGroups(), nil
+	return resp.GetGroups()
+}
+
+func (g *GroupService) UpdateScoreForUserInAGroup(username string, groupId string, scoreToAdd float64) bool {
+
+	_, err := g.redisClient.ZIncrBy(g.Ctx(), groupId, scoreToAdd, username).Result()
+
+	if err != nil {
+		log.Fatalf("Error adding user score", err)
+		return false
+	}
+
+	log.Println("Score added to user:", username, " in group:", groupId, "successfully!")
+	return true
 }

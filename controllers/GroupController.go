@@ -24,9 +24,9 @@ type GroupController struct {
 	groupService *services.GroupService
 }
 
-func NewGroupController(dynamodbSVC *dynamodb.DynamoDB, ctx context.Context, redisClient *redis.Client) *GroupController {
+func NewGroupController(dynamodbSVC *dynamodb.DynamoDB, ctx context.Context, redisClient *redis.Client, grpcClient services.UserServiceClient) *GroupController {
 	groupRepo := &repo.GroupRepository{}
-	groupService := services.NewGroupService(dynamodbSVC, ctx, redisClient, groupRepo)
+	groupService := services.NewGroupService(dynamodbSVC, ctx, redisClient, groupRepo, grpcClient)
 	return &GroupController{groupService}
 }
 
@@ -113,9 +113,13 @@ func (g *GroupController) GetGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *GroupController) UpdateScoresController(username string, score float64) {
-	// find all the groups in which user exists
-	g.groupService.GetAllUserGroupsService(username)
+	groups := g.groupService.GetAllUserGroupsServiceAndUpdateTotalScore(username, float32(score))
 	// update the score in each group board
-	// add score to total time in dynamodb
-
+	for _, groupId := range groups {
+		success := g.groupService.UpdateScoreForUserInAGroup(username, groupId, float64(score))
+		if success != true {
+			log.Fatal("Group Score for user:", username, " cannot be updated for group:", groupId)
+		}
+	}
+	return
 }

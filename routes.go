@@ -1,4 +1,4 @@
-package routes
+package main
 
 import (
 	"cloud.google.com/go/pubsub"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/PraveenPin/GroupService/controllers"
 	"github.com/PraveenPin/GroupService/init_database"
+	"github.com/PraveenPin/GroupService/services"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
@@ -16,8 +17,6 @@ import (
 )
 
 const PORT = ":8083"
-const GRPC_PORT = ":8085"
-const GRPC_TARGET = "localhost:9000"
 
 type Dispatcher struct {
 }
@@ -29,7 +28,6 @@ func HomeEndpoint(w http.ResponseWriter, r *http.Request) {
 func (r *Dispatcher) StartSubscriber(pubsubClient *pubsub.Client, ctx context.Context, groupController *controllers.GroupController) {
 	log.Println("Starting pub/sub subscriber")
 	sub := pubsubClient.Subscription(init_database.SubID)
-	log.Println("Adtrr pub/sub subscriber")
 
 	err := sub.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
 		log.Println("Got message: ", string(msg.Data), msg.Attributes)
@@ -51,8 +49,8 @@ func (r *Dispatcher) StartSubscriber(pubsubClient *pubsub.Client, ctx context.Co
 	return
 }
 
-func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.Context, pubsubClient *pubsub.Client) {
-	groupController := controllers.NewGroupController(db, ctx, rdc)
+func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.Context, pubsubClient *pubsub.Client, grpcClient services.UserServiceClient) {
+	groupController := controllers.NewGroupController(db, ctx, rdc, grpcClient)
 	//Start Subscriber Service
 	go r.StartSubscriber(pubsubClient, ctx, groupController)
 

@@ -3,13 +3,19 @@ package main
 import (
 	"cloud.google.com/go/pubsub"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/PraveenPin/GroupService/controllers"
+	"github.com/PraveenPin/GroupService/groupModels"
 	"github.com/PraveenPin/GroupService/init_database"
 	"github.com/PraveenPin/GroupService/services"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"strconv"
@@ -49,6 +55,36 @@ func (r *Dispatcher) StartSubscriber(pubsubClient *pubsub.Client, ctx context.Co
 	return
 }
 
+func getPemCert(token *jwt.Token) (string, error) {
+	cert := ""
+	resp, err := http.Get(fmt.Sprintf("https://%s/.well-known/jwks.json", init_database.AUTH0_DOMAIN))
+
+	if err != nil {
+		return cert, err
+	}
+	defer resp.Body.Close()
+
+	var jwks = groupModels.Jwks{}
+	err = json.NewDecoder(resp.Body).Decode(&jwks)
+
+	if err != nil {
+		return cert, err
+	}
+
+	for k, _ := range jwks.Keys {
+		if token.Header["kid"] == jwks.Keys[k].Kid {
+			cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
+		}
+	}
+
+	if cert == "" {
+		err := errors.New("Unable to find appropriate key.")
+		return cert, err
+	}
+
+	return cert, nil
+}
+
 func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.Context, pubsubClient *pubsub.Client, grpcClient services.UserServiceClient) {
 	groupController := controllers.NewGroupController(db, ctx, rdc, grpcClient)
 	//Start Subscriber Service
@@ -56,24 +92,53 @@ func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.
 
 	log.Println("Initialize the router")
 	router := mux.NewRouter()
+
+	log.Println("Securing all endpoints with jwt middleware")
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			// Verify 'aud' claim
+			aud := init_database.AUTH0_AUDIENCE
+			checkAud := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
+			if !checkAud {
+				return token, errors.New("Invalid audience.")
+			}
+			// Verify 'iss' claim
+			iss := fmt.Sprintf("https://%s/", init_database.AUTH0_DOMAIN)
+			checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
+			if !checkIss {
+				return token, errors.New("Invalid issuer.")
+			}
+
+			cert, err := getPemCert(token)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			result, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
+			return result, nil
+		},
+		SigningMethod: jwt.SigningMethodRS256,
+	})
 	router.StrictSlash(true)
 	router.HandleFunc("/", HomeEndpoint).Methods("GET")
 
 	// Group Resource
 	groupRoutes := router.PathPrefix("/group").Subrouter()
-	groupRoutes.HandleFunc("/createGroup", groupController.CreateGroupController).Methods("POST")
-	groupRoutes.HandleFunc("/joinGroup", groupController.JoinGroupController).Methods("POST")
-	groupRoutes.HandleFunc("/leaveGroup", groupController.LeaveGroupController).Methods("POST")
+	groupRoutes.Handle("/createGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.CreateGroupController))).Methods("POST")
+	groupRoutes.Handle("/joinGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.JoinGroupController))).Methods("POST")
+	groupRoutes.Handle("/leaveGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.LeaveGroupController))).Methods("POST")
 	//groupRoutes.HandleFunc("/openGroup", groupController.getGroup).Methods("POST")
 
 	//Testing purposes
-	groupRoutes.HandleFunc("/getGroup", groupController.GetGroup).Methods("POST")
+	groupRoutes.Handle("/getGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.GetGroup))).Methods("POST")
 
-	// bind the routes
-	http.Handle("/", router)
+	corsWrapper := cors.New(cors.Options{
+		AllowedMethods: []string{"GET", "POST"},
+		AllowedHeaders: []string{"Content-Type", "Origin", "Accept", "*"},
+	})
 
 	log.Println("Add the listener to port ", PORT)
 
 	//serve
-	http.ListenAndServe(PORT, nil)
+	http.ListenAndServe(PORT, corsWrapper.Handler(router))
 }

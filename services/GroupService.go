@@ -67,7 +67,7 @@ func (g *GroupService) CreateGroupService(newGroup groupModels.Group) (bool, err
 	_, create_redis_err := g.createLeaderBoardInRedis(newGroup)
 
 	if create_redis_err != nil {
-		log.Fatal("Error create a group table in redis", create_redis_err)
+		log.Println("Error create a group table in redis", create_redis_err)
 		return false, create_redis_err
 	}
 
@@ -79,7 +79,7 @@ func (g *GroupService) CreateGroupService(newGroup groupModels.Group) (bool, err
 	_, create_err := g.groupRepo.Create(newGroup, g.DynamodbSVC())
 
 	if create_err != nil {
-		log.Fatal("Error %v creating group with", create_err, newGroup)
+		log.Println("Error %v creating group with", create_err, newGroup)
 		return false, create_err
 	}
 
@@ -91,7 +91,7 @@ func (g *GroupService) JoinGroupService(joinGroup groupModels.JoinGroupModel) (b
 	_, joinError := g.AddUserToLeaderBoard(joinGroup)
 
 	if joinError != nil {
-		log.Fatal("Error %v adding user to group in redis", joinError, joinGroup)
+		log.Println("Error %v adding user to group in redis", joinError, joinGroup)
 		return false, joinError
 	}
 
@@ -102,7 +102,7 @@ func (g *GroupService) JoinGroupService(joinGroup groupModels.JoinGroupModel) (b
 	_, create_err := g.groupRepo.AddUserToGroup(joinGroup, g.DynamodbSVC())
 
 	if create_err != nil {
-		log.Fatal("Error %v adding user to group in dynamodb", create_err, joinGroup)
+		log.Println("Error %v adding user to group in dynamodb", create_err, joinGroup)
 		return false, create_err
 	}
 
@@ -114,7 +114,7 @@ func (g *GroupService) JoinGroupService(joinGroup groupModels.JoinGroupModel) (b
 func (g *GroupService) LeaveGroupService(leaveGroup groupModels.JoinGroupModel) (bool, error) {
 	_, add_err := g.RemoveUserFromLeaderBoard(leaveGroup)
 	if add_err != nil {
-		log.Fatal("Error %v removing user from group in redis", add_err, leaveGroup)
+		log.Println("Error %v removing user from group in redis", add_err, leaveGroup)
 		return false, add_err
 	}
 
@@ -126,7 +126,7 @@ func (g *GroupService) LeaveGroupService(leaveGroup groupModels.JoinGroupModel) 
 	_, err := g.groupRepo.RemoveUserFromGroup(leaveGroup, g.DynamodbSVC())
 
 	if err != nil {
-		log.Fatal("Error %v removing user from group in dynamodb", err, leaveGroup)
+		log.Println("Error %v removing user from group in dynamodb", err, leaveGroup)
 		return false, err
 	}
 
@@ -158,7 +158,7 @@ func (g *GroupService) createLeaderBoardInRedis(newGroup groupModels.Group) (boo
 
 	_, err := pipe.Exec(g.Ctx())
 	if err != nil {
-		log.Fatalf("Error is: ", err)
+		log.Println("Error is: ", err)
 	}
 
 	return true, nil
@@ -210,7 +210,7 @@ func (g *GroupService) AddGroupToUsersTable(username string, groupID string) (bo
 		GroupId:  groupID,
 	})
 	if err != nil {
-		log.Fatalf("failed to create user: %v", err)
+		log.Println("failed to create user: %v", err)
 		return false, err
 	}
 	return true, nil
@@ -224,7 +224,7 @@ func (g *GroupService) RemoveGroupFromUsersTable(username string, groupID string
 		GroupId:  groupID,
 	})
 	if err != nil {
-		log.Fatalf("failed to remove user: %v", err)
+		log.Println("failed to remove user: %v", err)
 		return false, err
 	}
 	return true, nil
@@ -243,13 +243,12 @@ func (g *GroupService) GetAllUserGroupsServiceAndUpdateTotalScore(username strin
 	log.Println("Calling rpc to update total time and get groups of user ", username)
 
 	resp := &UserNameResponse{}
-	// Create user
 	resp, err := g.grpcClient.GetAllUserGroupsAndUpdateTotalScore(context.Background(), &UserNameRequest{
 		Username: username,
 		Score:    score,
 	})
 	if err != nil {
-		log.Fatalf("failed to remove user: %v", err)
+		log.Println("failed to remove user: %v", err)
 		return []string{}
 	}
 	return resp.GetGroups()
@@ -260,7 +259,7 @@ func (g *GroupService) UpdateScoreForUserInAGroup(username string, groupId strin
 	_, err := g.redisClient.ZIncrBy(g.Ctx(), groupId, scoreToAdd, username).Result()
 
 	if err != nil {
-		log.Fatalf("Error adding user score", err)
+		log.Println("Error adding user score", err)
 		return false
 	}
 

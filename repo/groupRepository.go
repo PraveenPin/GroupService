@@ -35,12 +35,12 @@ func (g *GroupRepository) GetOne(groupId string, dynamoDBSvc *dynamodb.DynamoDB)
 		},
 	})
 	if err != nil {
-		log.Fatalf("Got error calling get group: %s", err)
+		log.Println("Got error calling get group: %s", err)
 		return emptyGroup
 	}
 
 	if result.Item == nil {
-		log.Fatalf("Could not find group with Id'" + groupId + "'")
+		log.Println("Could not find group with Id'" + groupId + "'")
 		return emptyGroup
 	}
 
@@ -48,7 +48,7 @@ func (g *GroupRepository) GetOne(groupId string, dynamoDBSvc *dynamodb.DynamoDB)
 
 	err = dynamodbattribute.UnmarshalMap(result.Item, &group)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal Record, %v", err)
+		log.Println("Failed to unmarshal Record, %v", err)
 		return emptyGroup
 	}
 
@@ -61,7 +61,7 @@ func (g *GroupRepository) Create(group groupModels.Group, dynamoDBSvc *dynamodb.
 
 	av, err := dynamodbattribute.MarshalMap(group)
 	if err != nil {
-		log.Fatalf("Got error marshalling new group item: %s", err)
+		log.Println("Got error marshalling new group item: %s", err)
 		return false, nil
 	}
 
@@ -72,7 +72,7 @@ func (g *GroupRepository) Create(group groupModels.Group, dynamoDBSvc *dynamodb.
 
 	_, err = dynamoDBSvc.PutItem(input)
 	if err != nil {
-		log.Fatalf("Got error calling PutItem: %s", err)
+		log.Println("Got error calling PutItem: %s", err)
 		return false, nil
 	}
 	log.Println("New Group %s inserted for user: %s", group.GroupName, group.CreatedBy)

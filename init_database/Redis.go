@@ -20,7 +20,7 @@ func (rd *RedisDatabase) AddScoreToAUserInAGroup(ctx context.Context, client *re
 	res, err := client.ZIncrBy(ctx, groupName, scoreToAdd, userName).Result()
 
 	if err != nil {
-		log.Fatalf("Error adding user score", err)
+		log.Println("Error adding user score", err)
 	}
 
 	log.Println("Score added to user in a group successfully!", res)
@@ -33,7 +33,7 @@ func (rd *RedisDatabase) GetUserWithScoresInGroup(ctx context.Context, client *r
 	// Get all users in a specific group from the database
 	userScores, err := client.ZRangeWithScores(ctx, groupName, 0, -1).Result()
 	if err != nil {
-		log.Fatalf("Error obtaining users with scores ", err)
+		log.Println("Error obtaining users with scores ", err)
 	}
 
 	// Print all users with scores in the group to the console
@@ -90,12 +90,6 @@ func (rd *RedisDatabase) ClearDB(ctx context.Context, client *redis.Client) {
 	} else {
 		fmt.Println("Database flushed successfully")
 	}
-
-	// close the Redis client
-	//err = client.Close()
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
 }
 
 func (rd *RedisDatabase) GetLeaderBoardByGroup(ctx context.Context, client *redis.Client, groupId string) {

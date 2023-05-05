@@ -66,7 +66,7 @@ func (g *GroupController) JoinGroupController(w http.ResponseWriter, r *http.Req
 
 	_, joinError := g.groupService.JoinGroupService(joinGroup)
 	if joinError != nil {
-		log.Fatal("Error %v adding user to group in redis", joinError, joinGroup)
+		log.Println("Error %v adding user to group in redis", joinError, joinGroup)
 		response.Format(w, r, true, 418, joinError)
 		return
 	}
@@ -118,7 +118,7 @@ func (g *GroupController) UpdateScoresController(username string, score float64)
 	for _, groupId := range groups {
 		success := g.groupService.UpdateScoreForUserInAGroup(username, groupId, float64(score))
 		if success != true {
-			log.Fatal("Group Score for user:", username, " cannot be updated for group:", groupId)
+			log.Println("Group Score for user:", username, " cannot be updated for group:", groupId)
 		}
 	}
 	return

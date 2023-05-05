@@ -130,7 +130,7 @@ func (r *Dispatcher) Init(db *dynamodb.DynamoDB, rdc *redis.Client, ctx context.
 	//groupRoutes.HandleFunc("/openGroup", groupController.getGroup).Methods("POST")
 
 	//Testing purposes
-	groupRoutes.Handle("/getGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.GetGroup))).Methods("POST")
+	groupRoutes.Handle("/getGroup", jwtMiddleware.Handler(http.HandlerFunc(groupController.GetGroup))).Methods("GET")
 
 	corsWrapper := cors.New(cors.Options{
 		AllowedMethods: []string{"GET", "POST"},

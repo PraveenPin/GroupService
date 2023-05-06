@@ -98,7 +98,7 @@ func (g *GroupController) LeaveGroupController(w http.ResponseWriter, r *http.Re
 }
 
 func (g *GroupController) GetGroup(w http.ResponseWriter, r *http.Request) {
-	log.Println("Remove a user from a group Request: ", r)
+	log.Println("Get a group Request: ", r)
 	decoder := json.NewDecoder(r.Body)
 
 	leaveGroup := groupModels.JoinGroupModel{}

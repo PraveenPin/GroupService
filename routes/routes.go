@@ -1,4 +1,4 @@
-package main
+package routes
 
 import (
 	"cloud.google.com/go/pubsub"

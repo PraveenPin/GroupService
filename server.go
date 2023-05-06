@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/PraveenPin/GroupService/init_database"
+	"github.com/PraveenPin/GroupService/routes"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 	//redisDB.GetScoreByAUserInAGroup(ctx, redisClient, "JTcWuWP3Wkug22d3XM5KS5", "praveenpin-1")
 	//redisDB.AddScoreToAUserInAGroup(ctx, redisClient, "JTcWuWP3Wkug22d3XM5KS5", "praveenpin-1", 9)
 
-	dispatcher := Dispatcher{}
+	dispatcher := routes.Dispatcher{}
 
 	dispatcher.Init(dynamoDBSvc, redisClient, ctx, pubsubClient, gRPCClient)
 
